@@ -6,7 +6,8 @@ from typing import List, Tuple
 import re
 from os import makedirs
 
-def extract_gallery_id(urlstr:str)->str:
+
+def extract_gallery_id(urlstr: str) -> str:
     """
     Returns the Gallery ID from a given `urlstr`.
     This `urlstr` can be of the following formats:
@@ -24,7 +25,7 @@ def extract_gallery_id(urlstr:str)->str:
     # Ensure correct domain
     if not (url_struct.hostname == "www.imagefap.com" or url_struct.hostname == "imagefap.com"):
         raise RuntimeError(f"Expected a gallery from imagefap.com, instead given link to {urlstr}.")
-    
+
     # Decide procedure based on path
     path = url_struct.path.split("/")
     path.pop(0)
@@ -38,25 +39,27 @@ def extract_gallery_id(urlstr:str)->str:
             # https://www.imagefap.com/photo/9876543210/?pgid=&gid={id}&page=0 or https://www.imagefap.com/gallery.php?gid={id}
             for query in queries:
                 if query[:4] == "gid=":
-                    return query[4:] # ID will be the rest of the query
+                    return query[4:]  # ID will be the rest of the query
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
-def get_gallery_name(gallery_id:str)->str:
+
+def get_gallery_name(gallery_id: str) -> str:
     """
     Returns the name of the gallery, given the gallery's ID
     """
-    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}" # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
+    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
     request = requests.get(gallery_url)
     html_code = BeautifulSoup(request.content, 'html.parser')
     title = html_code.select("title")[0].decode_contents()
     return title
 
-def get_image_URLs(gallery_id:str)->List[str]:
+
+def get_image_URLs(gallery_id: str) -> List[str]:
     """
     Parses a given URL, validating it and returning the image URLs to extract.
     This is constrained by the rules given by `rp`.
     """
-    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}" # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
+    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
 
     # Cleanly extract all links that link to image pages of the gallery
     links = []
@@ -67,7 +70,7 @@ def get_image_URLs(gallery_id:str)->List[str]:
     # extract links from a elems and ignore duplicates
     for elem in elems:
         link = elem.get("href")
-        if link.startswith("/"): # then it's a path, add the domain name
+        if link.startswith("/"):  # then it's a path, add the domain name
             link = f"https://www.imagefap.com{link}"
         if link not in links:
             links.append(link)
@@ -87,10 +90,11 @@ def get_image_URLs(gallery_id:str)->List[str]:
             continue
 
         image_page_urls.append(link)
-    
+
     return image_page_urls
 
-def extract_image_source(image_url:str)->Tuple[str, str]:
+
+def extract_image_source(image_url: str) -> Tuple[str, str]:
     """
     Extracts a tuple (image title, image source URL), based on a given image page URL.
     """
@@ -98,16 +102,18 @@ def extract_image_source(image_url:str)->Tuple[str, str]:
     request = requests.get(image_url)
     html_code = BeautifulSoup(request.content, 'html.parser')
     elems = html_code.select("#mainPhoto")
-    
+
     if len(elems) > 1:
-        print("More than one element with ID 'mainPhoto' detected, using first one.") #TODO: use logging
+        # TODO: use logging
+        print("More than one element with ID 'mainPhoto' detected, using first one.")
     elif len(elems) == 0:
         raise RuntimeError(f"No main photo detected in link {image_url}.")
-    
+
     elem = elems[0]
     return (elem.get('title'), elem.get("src"))
 
-def download_image(image_src_url:str, image_name:str, dl_path:str):
+
+def download_image(image_src_url: str, image_name: str, dl_path: str):
     """
     Downloads an image from `image_src_url` to `dl_path`.
     """
@@ -116,13 +122,14 @@ def download_image(image_src_url:str, image_name:str, dl_path:str):
     with open(f"{dl_path}/{image_name}", 'wb') as f:
         f.write(image_data)
 
+
 def main():
     """
     Main Function
     """
     urlstr = "https://www.imagefap.com/gallery.php?gid=1000000"
     # Initial Setup
-    ## Update robot.txt rules for future functions to follow
+    # Update robot.txt rules for future functions to follow
     rp = RobotFileParser()
     rp.set_url("http://www.imagefap.com/robots.txt")
     rp.read()
@@ -131,7 +138,7 @@ def main():
     if rp:
         if not rp.can_fetch("*", urlstr):
             raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
-    
+
     # Extract Images
     print("Extracting Images...")
     gallery_id = extract_gallery_id(urlstr)
@@ -147,6 +154,7 @@ def main():
             download_image(image_src, image_title, gallery_name)
     except requests.exceptions.RequestException as e:
         raise SystemExit("System Error. ") from e
-    
+
+
 if __name__ == "__main__":
     main()
