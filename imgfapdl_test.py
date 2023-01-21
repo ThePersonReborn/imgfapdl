@@ -1,5 +1,5 @@
 import unittest
-from main import *
+from imgfapdl import *
 
 class Test_Gallery_ID_Extraction(unittest.TestCase):
     def test_extract_gallery_id_gives_correct_ID(self):
