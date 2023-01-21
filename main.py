@@ -40,7 +40,7 @@ def extract_gallery_id(urlstr:str)->str:
                     return query[4:] # ID will be the rest of the query
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
-def get_image_URLs(gallery_id:str, rp:RobotFileParser=None)->List[str]:
+def get_image_URLs(gallery_id:str)->List[str]:
     """
     Parses a given URL, validating it and returning the image URLs to extract.
     This is constrained by the rules given by `rp`.
@@ -99,7 +99,7 @@ def main():
     gallery_id = extract_gallery_id(urlstr)
 
     try:
-        image_urls = get_image_URLs(gallery_id, rp)
+        image_urls = get_image_URLs(gallery_id)
         print(image_urls)
     except requests.exceptions.RequestException as e:
         raise SystemExit("System Error. ") from e
