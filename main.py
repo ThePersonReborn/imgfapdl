@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from typing import List, Tuple
 import re
 from os import makedirs
+from time import time
 
 
 def extract_gallery_id(urlstr: str) -> str:
@@ -149,18 +150,24 @@ def main():
             raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
 
     # Extract Images
-    print("Extracting Images...")
+    print("Preparing to download images...")
+    start_t = time()
     gallery_id = extract_gallery_id(urlstr)
     gallery_name = get_gallery_name(gallery_id)
 
     try:
-        print("Getting Image URLs...")
         image_urls = get_image_URLs(gallery_id)
+        end_t = time()
+        print(f"Preparation took {end_t - start_t:0.2}s.")
 
-        print("Getting Images...")
+        print("Downloading images...")
+        start_t = time()
         for image_url in image_urls:
             image_title, image_src = extract_image_source(image_url)
             download_image(image_src, image_title, gallery_name)
+        print(f"Download completed to \"{gallery_name}\".")
+        end_t = time()
+        print(f"Download took {end_t - start_t:0.2}s.")
     except requests.exceptions.RequestException as e:
         raise SystemExit("System Error. ") from e
 
