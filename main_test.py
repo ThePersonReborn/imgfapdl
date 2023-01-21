@@ -1,8 +1,8 @@
 import unittest
 from main import *
 
-class FunctionTest(unittest.TestCase):
-    def test_extract_ID(self):
+class Test_ID_Extraction(unittest.TestCase):
+    def test_extract_ID_gives_correct_ID(self):
         expected = "12345678"
         test_cases = [
             f"http://www.imagefap.com/gallery/{expected}",
@@ -17,3 +17,9 @@ class FunctionTest(unittest.TestCase):
         for test_case in test_cases:
             test_extracted_ID = extract_ID(test_case)
             self.assertEqual(test_extracted_ID, expected, msg=f"No match for URL \"{test_case}\": Expected ID \"{expected}\", got ID \"{test_extracted_ID}\"")
+    
+    def test_extract_ID_raises_error(self):
+        self.assertRaises(RuntimeError, extract_ID, "www.google.com")
+        self.assertRaises(RuntimeError, extract_ID, "www.imgfap.com/gallery/12345678")
+        self.assertRaises(RuntimeError, extract_ID, "https://www.imagefap.com/galery/12345678")
+        self.assertRaises(RuntimeError, extract_ID, "https://www.imagefap.com/gallery.php?xid=12345678")
