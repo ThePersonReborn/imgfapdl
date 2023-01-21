@@ -18,8 +18,8 @@ py imgfapdl.py gallery_url
 - `gallery_url`: The URL to the gallery. The parser is relatively versatile, it's been set to accept most formats of gallery URLs, such as:
     - **Copy Link Address from User**: `.../gallery/12345678`
     - **Actual URL of Gallery**: `.../pictures/12345678/Name-Of-Gallery`
-    - **URL of an Image inside the Gallery**: `/photo/9876543210/?pgid=&gid=12345678&page=0`
-    - **URL from a User's Favourites**: `/gallery.php?gid=12345678`.
+    - **URL of an Image inside the Gallery**: `.../photo/9876543210/?pgid=&gid=12345678&page=0`
+    - **URL from a User's Favourites**: `.../gallery.php?gid=12345678`.
 
 If you're encountering issues, surround the URL with double-quotes as the command line could have trouble interpreting the URL.
     
@@ -27,5 +27,5 @@ The program will then download the gallery to a directory in `imgfapdl`'s root d
 
 ## TODO
 - Logging.
-- Proper handling of errors, as of right now I'm too lazy to handle them so someone less used to Python will see some weird cryptic error.
+- Proper handling of errors, as of right now I'm too lazy to handle them so someone less used to Python will see some weird cryptic error. Also if filenames are invalid, the program silently fails.
 - Tests for the other parts of the code.
