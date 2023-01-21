@@ -52,7 +52,7 @@ def get_gallery_source(gallery_id: str) -> bytes:
     """
     global cached_source_code
     if cached_source_code is None:
-        gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
+        gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}&view=2"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
         request = requests.get(gallery_url)
         cached_source_code = BeautifulSoup(request.content, 'html.parser')
     return cached_source_code
