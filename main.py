@@ -1,8 +1,11 @@
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 import requests
+from bs4 import BeautifulSoup
+from typing import List, Set
+import re
 
-def extract_ID(urlstr:str)->str:
+def extract_gallery_id(urlstr:str)->str:
     """
     Returns the Gallery ID from a given `urlstr`.
     This `urlstr` can be of the following formats:
@@ -37,21 +40,59 @@ def extract_ID(urlstr:str)->str:
                     return query[4:] # ID will be the rest of the query
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
-def parse_URL(urlstr:str, rp:RobotFileParser)->str:
+def get_image_URLs(urlstr:str, rp:RobotFileParser=None)->List[str]:
     """
-    Parses a given URL, validating it and returning the gallery to read from.
+    Parses a given URL, validating it and returning the image URLs to extract.
     This is constrained by the rules given by `rp`.
     """
 
-    # Ensure URL is up/allowed
-    if not rp.can_fetch("*", urlstr):
-        raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
+    # Ensure URL is allowed
+    if rp:
+        if not rp.can_fetch("*", urlstr):
+            raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
 
     # Extract ID
-    gallery_id = extract_ID(urlstr)
+    gallery_id = extract_gallery_id(urlstr)
+    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}" # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
 
-    return f"http://www.imagefap.com/gallery/{gallery_id}"
+    # Cleanly extract all links that link to image pages of the gallery
+    links = []
+    try:
+        request = requests.get(gallery_url)
+        html_code = BeautifulSoup(request.content, 'html.parser')
+        elems = html_code.select('a')
 
+        # extract links from a elems and ignore duplicates
+        for elem in elems:
+            link = elem.get("href")
+            if link.startswith("/"): # then it's a path, add the domain name
+                link = f"https://www.imagefap.com{link}"
+            if link not in links:
+                links.append(link)
+    except requests.exceptions.Timeout:
+        raise RuntimeError(f"Timeout when requesting for {gallery_url}.")
+    except requests.exceptions.TooManyRedirects:
+        raise RuntimeError(f"Too many redirects when accessing {gallery_url}.")
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Error accessing {gallery_url}") from e
+
+    # For each link, determine if it's a relevant link
+    image_page_urls = []
+    for link in links:
+        url_struct = urlparse(link)
+        # Check if it's a photo
+        regex_pattern = re.compile("\/photo\/(\w+)\/")
+        if regex_pattern.match(url_struct.path) is None:
+            continue
+
+        # Check if it has the correct gallery ID
+        query_str = f"gid={gallery_id}"
+        if query_str not in url_struct.query:
+            continue
+
+        image_page_urls.append(link)
+    
+    return image_page_urls
 
 def main():
     """
@@ -63,8 +104,8 @@ def main():
     rp.set_url("http://www.imagefap.com/robots.txt")
     rp.read()
 
-    x = parse_URL("http://imagefap.com/random.php", rp)
-    print(x)
+    image_urls = get_image_URLs("https://www.imagefap.com/gallery.php?gid=1000000", rp)
+    print(image_urls)
 
 if __name__ == "__main__":
     main()
