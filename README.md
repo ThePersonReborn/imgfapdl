@@ -22,3 +22,7 @@ py imgfapdl.py gallery_url
     - **URL from a User's Favourites**: `/gallery.php?gid=12345678`.
     
 The program will then download the gallery to a directory in `imgfapdl`'s root directory, with the same name as the gallery.
+
+## TODO
+- Logging.
+- Proper handling of errors, as of right now I'm too lazy to handle them so someone less used to Python will see some weird cryptic error.
