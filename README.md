@@ -1,6 +1,6 @@
-# IMGFap Gallery Download
+# ImageFap Gallery Download
 
-A rudimentary downloader for IMGFap galleries. 
+A rudimentary downloader for ImageFap galleries. 
 
 ## Installation
 Download [Python 3.11](https://www.python.org/downloads/).
@@ -20,3 +20,5 @@ py imgfapdl.py gallery_url
     - **Actual URL of Gallery**: `.../pictures/12345678/Name-Of-Gallery`
     - **URL of an Image inside the Gallery**: `/photo/9876543210/?pgid=&gid=12345678&page=0`
     - **URL from a User's Favourites**: `/gallery.php?gid=12345678`.
+    
+The program will then download the gallery to a directory in `imgfapdl`'s root directory, with the same name as the gallery.
