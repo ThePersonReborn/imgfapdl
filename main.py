@@ -58,7 +58,6 @@ def get_gallery_source(gallery_id: str) -> bytes:
     return cached_source_code
 
 
-
 def get_gallery_name(gallery_id: str) -> str:
     """
     Returns the name of the gallery, given the gallery's ID
@@ -104,6 +103,7 @@ def get_image_URLs(gallery_id: str) -> List[str]:
 
     return image_page_urls
 
+
 def download_image(image_url:str, dl_path:str):
     """
     Downloads an image to `dl_path` given its page URL.
@@ -130,11 +130,10 @@ def download_image(image_url:str, dl_path:str):
         f.write(image_data)
 
 
-def main():
+def main(urlstr:str):
     """
     Main Function
     """
-    urlstr = "https://www.imagefap.com/gallery.php?gid=1000000"
     # Initial Setup
     # Update robot.txt rules for future functions to follow
     rp = RobotFileParser()
@@ -170,4 +169,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Downloads images from an Imagefap Gallery."
+    )
+    parser.add_argument(
+        "gallery_url",
+        type=str,
+        help="link of the gallery"
+    )
+
+    args = parser.parse_args()
+    main(args.gallery_url)
