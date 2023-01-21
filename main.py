@@ -43,13 +43,25 @@ def extract_gallery_id(urlstr: str) -> str:
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
 
+cached_source_code:bytes = None
+def get_gallery_source(gallery_id: str) -> bytes:
+    """
+    Returns the source code of the gallery with `gallery_id` or a cached copy of it.
+    """
+    global cached_source_code
+    if cached_source_code is None:
+        gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
+        request = requests.get(gallery_url)
+        cached_source_code = BeautifulSoup(request.content, 'html.parser')
+    return cached_source_code
+
+
+
 def get_gallery_name(gallery_id: str) -> str:
     """
     Returns the name of the gallery, given the gallery's ID
     """
-    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
-    request = requests.get(gallery_url)
-    html_code = BeautifulSoup(request.content, 'html.parser')
+    html_code = get_gallery_source(gallery_id)
     title = html_code.select("title")[0].decode_contents()
     return title
 
@@ -59,12 +71,9 @@ def get_image_URLs(gallery_id: str) -> List[str]:
     Parses a given URL, validating it and returning the image URLs to extract.
     This is constrained by the rules given by `rp`.
     """
-    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
-
     # Cleanly extract all links that link to image pages of the gallery
     links = []
-    request = requests.get(gallery_url)
-    html_code = BeautifulSoup(request.content, 'html.parser')
+    html_code = get_gallery_source(gallery_id)
     elems = html_code.select('a')
 
     # extract links from a elems and ignore duplicates
