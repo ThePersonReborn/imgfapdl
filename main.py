@@ -6,6 +6,7 @@ from typing import List, Tuple
 import re
 from os import makedirs
 from time import time
+from concurrent.futures import ThreadPoolExecutor
 
 
 def extract_gallery_id(urlstr: str) -> str:
@@ -158,8 +159,9 @@ def main():
 
         print("Downloading images...")
         start_t = time()
-        for image_url in image_urls:
-            download_image(image_url, gallery_name)
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(download_image, image_url, gallery_name) for image_url in image_urls]
+            
         print(f"Download completed to \"{gallery_name}\".")
         end_t = time()
         print(f"Download took {end_t - start_t:0.2f}s.")
