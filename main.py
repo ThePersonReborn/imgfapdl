@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Tuple
 import re
+from os import makedirs
 
 def extract_gallery_id(urlstr:str)->str:
     """
@@ -39,6 +40,16 @@ def extract_gallery_id(urlstr:str)->str:
                 if query[:4] == "gid=":
                     return query[4:] # ID will be the rest of the query
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
+
+def get_gallery_name(gallery_id:str)->str:
+    """
+    Returns the name of the gallery, given the gallery's ID
+    """
+    gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}" # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
+    request = requests.get(gallery_url)
+    html_code = BeautifulSoup(request.content, 'html.parser')
+    title = html_code.select("title")[0].decode_contents()
+    return title
 
 def get_image_URLs(gallery_id:str)->List[str]:
     """
@@ -96,6 +107,15 @@ def extract_image_source(image_url:str)->Tuple[str, str]:
     elem = elems[0]
     return (elem.get('title'), elem.get("src"))
 
+def download_image(image_src_url:str, image_name:str, dl_path:str):
+    """
+    Downloads an image from `image_src_url` to `dl_path`.
+    """
+    makedirs(dl_path, exist_ok=True)
+    image_data = requests.get(image_src_url).content
+    with open(f"{dl_path}/{image_name}", 'wb') as f:
+        f.write(image_data)
+
 def main():
     """
     Main Function
@@ -115,16 +135,16 @@ def main():
     # Extract Images
     print("Extracting Images...")
     gallery_id = extract_gallery_id(urlstr)
+    gallery_name = get_gallery_name(gallery_id)
 
     try:
         print("Getting Image URLs...")
         image_urls = get_image_URLs(gallery_id)
 
         print("Getting Images...")
-        image_tups = []
         for image_url in image_urls:
-            image_tups.append(extract_image_source(image_url))
-        print(image_tups)
+            image_title, image_src = extract_image_source(image_url)
+            download_image(image_src, image_title, gallery_name)
     except requests.exceptions.RequestException as e:
         raise SystemExit("System Error. ") from e
     
