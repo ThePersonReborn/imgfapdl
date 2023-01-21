@@ -63,7 +63,10 @@ def get_gallery_name(gallery_id: str) -> str:
     Returns the name of the gallery, given the gallery's ID
     """
     html_code = get_gallery_source(gallery_id)
-    title = html_code.select("title")[0].decode_contents()
+    title:str = html_code.select("title")[0].text
+    
+    # Remove additional text from title
+    title = title.replace("Porn Pics & Porn GIFs", "").strip()
     return title
 
 
