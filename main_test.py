@@ -27,7 +27,7 @@ class Test_Gallery_ID_Extraction(unittest.TestCase):
 class Test_Image_URL_Extraction(unittest.TestCase):
     def test_get_image_urls_gives_correct_urls(self):
         # If this test case fails, first check if the gallery is still up, I chose a random one and hardcoded the image sources.
-        sample_1_source = "https://www.imagefap.com/gallery.php?gid=1000000"
+        sample_1_source = "1000000"
         sample_1_expected = [
             "https://www.imagefap.com/photo/475178767/?pgid=&gid=1000000&page=0",
             "https://www.imagefap.com/photo/1921274586/?pgid=&gid=1000000&page=0",

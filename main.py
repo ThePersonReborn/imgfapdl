@@ -40,41 +40,26 @@ def extract_gallery_id(urlstr:str)->str:
                     return query[4:] # ID will be the rest of the query
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
-def get_image_URLs(urlstr:str, rp:RobotFileParser=None)->List[str]:
+def get_image_URLs(gallery_id:str, rp:RobotFileParser=None)->List[str]:
     """
     Parses a given URL, validating it and returning the image URLs to extract.
     This is constrained by the rules given by `rp`.
     """
-
-    # Ensure URL is allowed
-    if rp:
-        if not rp.can_fetch("*", urlstr):
-            raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
-
-    # Extract ID
-    gallery_id = extract_gallery_id(urlstr)
     gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}" # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
 
     # Cleanly extract all links that link to image pages of the gallery
     links = []
-    try:
-        request = requests.get(gallery_url)
-        html_code = BeautifulSoup(request.content, 'html.parser')
-        elems = html_code.select('a')
+    request = requests.get(gallery_url)
+    html_code = BeautifulSoup(request.content, 'html.parser')
+    elems = html_code.select('a')
 
-        # extract links from a elems and ignore duplicates
-        for elem in elems:
-            link = elem.get("href")
-            if link.startswith("/"): # then it's a path, add the domain name
-                link = f"https://www.imagefap.com{link}"
-            if link not in links:
-                links.append(link)
-    except requests.exceptions.Timeout:
-        raise RuntimeError(f"Timeout when requesting for {gallery_url}.")
-    except requests.exceptions.TooManyRedirects:
-        raise RuntimeError(f"Too many redirects when accessing {gallery_url}.")
-    except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Error accessing {gallery_url}") from e
+    # extract links from a elems and ignore duplicates
+    for elem in elems:
+        link = elem.get("href")
+        if link.startswith("/"): # then it's a path, add the domain name
+            link = f"https://www.imagefap.com{link}"
+        if link not in links:
+            links.append(link)
 
     # For each link, determine if it's a relevant link
     image_page_urls = []
@@ -98,14 +83,26 @@ def main():
     """
     Main Function
     """
+    urlstr = "https://www.imagefap.com/gallery.php?gid=1000000"
     # Initial Setup
     ## Update robot.txt rules for future functions to follow
     rp = RobotFileParser()
     rp.set_url("http://www.imagefap.com/robots.txt")
     rp.read()
 
-    image_urls = get_image_URLs("https://www.imagefap.com/gallery.php?gid=1000000", rp)
-    print(image_urls)
+    # Ensure URL is allowed
+    if rp:
+        if not rp.can_fetch("*", urlstr):
+            raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
+    
+    # Extract Image URLS
+    gallery_id = extract_gallery_id(urlstr)
 
+    try:
+        image_urls = get_image_URLs(gallery_id, rp)
+        print(image_urls)
+    except requests.exceptions.RequestException as e:
+        raise SystemExit("System Error. ") from e
+    
 if __name__ == "__main__":
     main()
