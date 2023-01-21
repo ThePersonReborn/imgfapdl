@@ -103,10 +103,9 @@ def get_image_URLs(gallery_id: str) -> List[str]:
 
     return image_page_urls
 
-
-def extract_image_source(image_url: str) -> Tuple[str, str]:
+def download_image(image_url:str, dl_path:str):
     """
-    Extracts a tuple (image title, image source URL), based on a given image page URL.
+    Downloads an image to `dl_path` given its page URL.
     """
     # Extract the image source URL
     request = requests.get(image_url)
@@ -120,16 +119,13 @@ def extract_image_source(image_url: str) -> Tuple[str, str]:
         raise RuntimeError(f"No main photo detected in link {image_url}.")
 
     elem = elems[0]
-    return (elem.get('title'), elem.get("src"))
+    image_title = elem.get('title')
+    image_src_url = elem.get('src')
 
-
-def download_image(image_src_url: str, image_name: str, dl_path: str):
-    """
-    Downloads an image from `image_src_url` to `dl_path`.
-    """
+    # Write the image file to disk.
     makedirs(dl_path, exist_ok=True)
     image_data = requests.get(image_src_url).content
-    with open(f"{dl_path}/{image_name}", 'wb') as f:
+    with open(f"{dl_path}/{image_title}", 'wb') as f:
         f.write(image_data)
 
 
@@ -158,16 +154,15 @@ def main():
     try:
         image_urls = get_image_URLs(gallery_id)
         end_t = time()
-        print(f"Preparation took {end_t - start_t:0.2}s.")
+        print(f"Preparation took {end_t - start_t:0.2f}s.")
 
         print("Downloading images...")
         start_t = time()
         for image_url in image_urls:
-            image_title, image_src = extract_image_source(image_url)
-            download_image(image_src, image_title, gallery_name)
+            download_image(image_url, gallery_name)
         print(f"Download completed to \"{gallery_name}\".")
         end_t = time()
-        print(f"Download took {end_t - start_t:0.2}s.")
+        print(f"Download took {end_t - start_t:0.2f}s.")
     except requests.exceptions.RequestException as e:
         raise SystemExit("System Error. ") from e
 
