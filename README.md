@@ -23,8 +23,9 @@ py imgfapdl.py gallery_url
 
 If you're encountering issues, surround the URL with double-quotes as the command line could have trouble interpreting the URL.
     
-The program will then download the gallery to a directory in `imgfapdl`'s root directory, with the same name as the gallery.
+The program will then download the gallery to a directory in `imgfapdl`'s root directory, with the same name as the gallery. If the gallery name contains invalid characters (e.g. Windows doesn't allow for filenames with `?` in them), these will be replaced with the [URL-encoded form](https://en.wikipedia.org/wiki/URL_encoding) of that character. The program still keeps other characters like spaces and exclamation marks as part of the filename, to allow for better readability.
 
 ## TODO
 - Logging.
 - Proper handling of errors, as of right now I'm too lazy to handle them so someone less used to Python will see some weird cryptic error.
+- Tests for the other parts of the code.

@@ -1,4 +1,4 @@
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
 from urllib.robotparser import RobotFileParser
 import requests
 from bs4 import BeautifulSoup
@@ -8,6 +8,28 @@ from os import makedirs
 from time import time
 from concurrent.futures import ThreadPoolExecutor
 
+DISALLOWED_CHARACTERS = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'] # characters that can't be used for filenames
+SEMI_URL_ENCODING = {
+    '\\': '%5C',
+    '/': '%2F',
+    ':': '%3A',
+    '*': '%2A',
+    '?': '%3F',
+    '"': '%22',
+    '<': '%3C',
+    '>': '%3E',
+    '|': '%7C' 
+}
+
+def generate_valid_filename(title: str) -> bool:
+    """
+    Returns a valid filename given a plain gallery/image title.
+    To prevent readability issues, we don't URL encode every character, only certain characters that aren't allowed in filenames.
+    """
+    filename = title
+    for char in DISALLOWED_CHARACTERS:
+        filename = filename.replace(char, SEMI_URL_ENCODING[char])
+    return filename
 
 def extract_gallery_id(urlstr: str) -> str:
     """
@@ -67,7 +89,9 @@ def get_gallery_name(gallery_id: str) -> str:
     
     # Remove additional text from title
     title = title.replace("Porn Pics & Porn GIFs", "").strip()
-    return title
+    filename = generate_valid_filename(title)
+
+    return filename
 
 
 def get_image_URLs(gallery_id: str) -> List[str]:
@@ -126,10 +150,12 @@ def download_image(image_url:str, dl_path:str):
     image_title = elem.get('title')
     image_src_url = elem.get('src')
 
+    filename = generate_valid_filename(image_title)
+
     # Write the image file to disk.
     makedirs(dl_path, exist_ok=True)
     image_data = requests.get(image_src_url).content
-    with open(f"{dl_path}/{image_title}", 'wb') as f:
+    with open(f"{dl_path}/{filename}", 'wb') as f:
         f.write(image_data)
 
 
