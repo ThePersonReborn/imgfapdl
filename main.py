@@ -1,4 +1,6 @@
 from urllib.parse import urlparse
+from urllib.robotparser import RobotFileParser
+import requests
 
 def extract_ID(urlstr:str)->str:
     """
@@ -35,14 +37,34 @@ def extract_ID(urlstr:str)->str:
                     return query[4:] # ID will be the rest of the query
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
-def parse_URL(urlstr:str)->str:
+def parse_URL(urlstr:str, rp:RobotFileParser)->str:
     """
     Parses a given URL, validating it and returning the gallery to read from.
+    This is constrained by the rules given by `rp`.
     """
 
-    # Ensure URL is up
+    # Ensure URL is up/allowed
+    if not rp.can_fetch("*", urlstr):
+        raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
 
     # Extract ID
     gallery_id = extract_ID(urlstr)
 
     return f"http://www.imagefap.com/gallery/{gallery_id}"
+
+
+def main():
+    """
+    Main Function
+    """
+    # Initial Setup
+    ## Update robot.txt rules for future functions to follow
+    rp = RobotFileParser()
+    rp.set_url("http://www.imagefap.com/robots.txt")
+    rp.read()
+
+    x = parse_URL("http://imagefap.com/random.php", rp)
+    print(x)
+
+if __name__ == "__main__":
+    main()
