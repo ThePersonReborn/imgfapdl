@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 import requests
 from bs4 import BeautifulSoup
-from typing import List, Set
+from typing import List, Tuple
 import re
 
 def extract_gallery_id(urlstr:str)->str:
@@ -79,6 +79,23 @@ def get_image_URLs(gallery_id:str)->List[str]:
     
     return image_page_urls
 
+def extract_image_source(image_url:str)->Tuple[str, str]:
+    """
+    Extracts a tuple (image title, image source URL), based on a given image page URL.
+    """
+    # Extract the image source URL
+    request = requests.get(image_url)
+    html_code = BeautifulSoup(request.content, 'html.parser')
+    elems = html_code.select("#mainPhoto")
+    
+    if len(elems) > 1:
+        print("More than one element with ID 'mainPhoto' detected, using first one.") #TODO: use logging
+    elif len(elems) == 0:
+        raise RuntimeError(f"No main photo detected in link {image_url}.")
+    
+    elem = elems[0]
+    return (elem.get('title'), elem.get("src"))
+
 def main():
     """
     Main Function
@@ -95,12 +112,19 @@ def main():
         if not rp.can_fetch("*", urlstr):
             raise RuntimeError(f"Cannot load {urlstr}, site owner has disallowed it for bots.")
     
-    # Extract Image URLS
+    # Extract Images
+    print("Extracting Images...")
     gallery_id = extract_gallery_id(urlstr)
 
     try:
+        print("Getting Image URLs...")
         image_urls = get_image_URLs(gallery_id)
-        print(image_urls)
+
+        print("Getting Images...")
+        image_tups = []
+        for image_url in image_urls:
+            image_tups.append(extract_image_source(image_url))
+        print(image_tups)
     except requests.exceptions.RequestException as e:
         raise SystemExit("System Error. ") from e
     
