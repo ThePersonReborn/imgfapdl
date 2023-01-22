@@ -140,6 +140,9 @@ def get_image_URLs(gallery_id: str) -> List[str]:
     # extract links from a elems and ignore duplicates
     for elem in elems:
         link = elem.get("href")
+        # Skip elements that don't have a `href` attribute
+        if link is None:
+            continue
         if link.startswith("/"):  # then it's a path, add the domain name
             link = f"https://www.imagefap.com{link}"
         if link not in links:
