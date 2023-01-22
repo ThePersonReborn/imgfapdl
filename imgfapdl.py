@@ -38,10 +38,16 @@ user_agents = [
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'
 ] 
 
+IP_BLOCKED = False
+
 def send_get_request(url: str) -> requests.Response:
     """
     Wrapper for sending a GET request to the URL with the appropriate headers.
     """
+    global IP_BLOCKED
+    if IP_BLOCKED:
+        raise RuntimeError("Bot already IP blocked, warning already sent.")
+    
     headers = {
         "User-Agent": random.choice(user_agents),
         "Referer": "https://www.google.com"
@@ -54,6 +60,7 @@ def send_get_request(url: str) -> requests.Response:
 
     # Check for IP block
     if response.url.endswith("human-verification"):
+        IP_BLOCKED = True
         if AUTO_OPEN:
             print("Attempting to open human verification page...")
             runstring = f"\"{BROWSER_PATH}\" {INCOGNITO_ARG} \"{url}\""
