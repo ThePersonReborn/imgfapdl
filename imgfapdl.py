@@ -2,7 +2,7 @@ import random
 import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-from os import makedirs
+from os import makedirs, path
 from time import time
 from typing import List
 from urllib.parse import urlparse
@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 # Browser Settings (For solving CAPTCHAs)
 ## Please read the README notes under "IP Blocks" BEFORE modifying anything here.
-AUTO_OPEN = False                                                            # change to True if you want the program to automatically open the link to the CAPTCHA.
+AUTO_OPEN = True                                                            # change to True if you want the program to automatically open the link to the CAPTCHA.
 BROWSER_PATH  = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" # change to the filepath of your browser
 INCOGNITO_ARG = "-incognito"                                                 # change to the argument to give to the browser for incognito mode
 
@@ -56,7 +56,7 @@ def send_get_request(url: str) -> requests.Response:
     if response.url.endswith("human-verification"):
         if AUTO_OPEN:
             print("Attempting to open human verification page...")
-            runstring = f"\"{BROWSER_PATH}\" {INCOGNITO_ARG} {url}"
+            runstring = f"\"{BROWSER_PATH}\" {INCOGNITO_ARG} \"{url}\""
             try:
                 subprocess.run(runstring, shell=True, check=True)
                 print("Opened the human verification page, please solve the CAPTCHA and try again.")
@@ -209,6 +209,9 @@ def download_image(image_url: str, dl_path: str):
     filename = generate_valid_filename(image_title)
 
     # Write the image file to disk.
+    if path.isfile(f"{dl_path}/{filename}"):
+        print(f"{dl_path}/{filename} already exists, skipping")
+        return
     makedirs(dl_path, exist_ok=True)
     image_data = send_get_request(image_src_url).content
     with open(f"{dl_path}/{filename}", 'wb') as f:
