@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 # Browser Settings (For solving CAPTCHAs)
 ## Please read the README notes under "IP Blocks" BEFORE modifying anything here.
-AUTO_OPEN = True                                                            # change to True if you want the program to automatically open the link to the CAPTCHA.
+AUTO_OPEN = False                                                            # change to True if you want the program to automatically open the link to the CAPTCHA.
 BROWSER_PATH  = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" # change to the filepath of your browser
 INCOGNITO_ARG = "-incognito"                                                 # change to the argument to give to the browser for incognito mode
 
