@@ -107,9 +107,9 @@ def get_gallery_source(gallery_id: str):
     if cached_source_code is None:
         # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
         gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}&view=2"
-        request = send_get_request(gallery_url)
-        request.raise_for_status()
-        cached_source_code = BeautifulSoup(request.content, 'html.parser')
+        response = send_get_request(gallery_url)
+        response.raise_for_status()
+        cached_source_code = BeautifulSoup(response.content, 'html.parser')
     return cached_source_code
 
 
@@ -172,9 +172,9 @@ def download_image(image_url: str, dl_path: str):
     Downloads an image to `dl_path` given its page URL.
     """
     # Extract the image source URL
-    request = send_get_request(image_url)
-    request.raise_for_status()
-    html_code = BeautifulSoup(request.content, 'html.parser')
+    response = send_get_request(image_url)
+    response.raise_for_status()
+    html_code = BeautifulSoup(response.content, 'html.parser')
     elems = html_code.select("#mainPhoto")
 
     if len(elems) > 1:
