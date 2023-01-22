@@ -1,5 +1,6 @@
 import random
 import re
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from os import makedirs
 from time import time
@@ -9,6 +10,12 @@ from urllib.robotparser import RobotFileParser
 
 import requests
 from bs4 import BeautifulSoup
+
+# Browser Settings (For solving CAPTCHAs)
+## Please read the README notes under "IP Blocks" BEFORE modifying anything here.
+AUTO_OPEN = False                                                            # change to True if you want the program to automatically open the link to the CAPTCHA.
+BROWSER_PATH  = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" # change to the filepath of your browser
+INCOGNITO_ARG = "-incognito"                                                 # change to the argument to give to the browser for incognito mode
 
 # characters that can't be used for filenames
 DISALLOWED_CHARACTERS = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
@@ -23,6 +30,8 @@ SEMI_URL_ENCODING = {
     '>': '%3E',
     '|': '%7C'
 }
+
+# User Agents for spoofing
 user_agents = [ 
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', 
 	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36', 
@@ -45,7 +54,17 @@ def send_get_request(url: str) -> requests.Response:
 
     # Check for IP block
     if response.url.endswith("human-verification"):
-        raise RuntimeError("Bot has been IP blocked for too many requests.")
+        if AUTO_OPEN:
+            print("Attempting to open human verification page...")
+            runstring = f"\"{BROWSER_PATH}\" {INCOGNITO_ARG} http://www.imagefap.com/human-verification"
+            try:
+                subprocess.run(runstring, shell=True, check=True)
+                print("Opened the human verification page, please solve the CAPTCHA and try again.")
+                print("If you don't see a CAPTCHA, there is probably an issue with INCOGNITO_ARG. Open http://www.imagefap.com/human-verification manually in an INCOGNITO window and solve the CAPTCHA.")
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"Could not automatically open human verification page, ensure you have the correct browser filepath and the incognito argument.")
+            raise RuntimeError("Bot has been IP blocked for too many requests. Please try running the command again after entering the CAPTCHA.")
+        raise RuntimeError("Bot has been IP blocked for too many requests. Please manually open http://www.imagefap.com/human-verification in an INCOGNITO window and solve the CAPTCHA, before trying again.")
     return response
 
 
