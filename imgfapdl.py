@@ -238,7 +238,7 @@ def main(urlstr: str):
                 try:
                     data = future.result()
                     images_downloaded += 1
-                    print(f"Progress: {(images_downloaded / images_total) * 100:0.1f}%")
+                    print(f"Progress: {(images_downloaded / images_total) * 100:0.1f}%", flush=True, end='\r')
                 except Exception as e:
                     print("Thread worker reported error:", str(e))
 
