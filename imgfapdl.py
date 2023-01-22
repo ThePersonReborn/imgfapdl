@@ -1,3 +1,4 @@
+import random
 import re
 from concurrent.futures import ThreadPoolExecutor
 from os import makedirs
@@ -22,6 +23,32 @@ SEMI_URL_ENCODING = {
     '>': '%3E',
     '|': '%7C'
 }
+user_agents = [ 
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', 
+	'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36', 
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36', 
+	'Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148', 
+	'Mozilla/5.0 (Linux; Android 11; SM-G960U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Mobile Safari/537.36' 
+] 
+
+def send_get_request(url: str) -> requests.Response:
+    """
+    Wrapper for sending a GET request to the URL with the appropriate headers.
+    """
+    headers = {
+        "User-Agent": random.choice(user_agents),
+        "Referer": "https://www.google.com"
+    }
+
+    response = requests.get(
+        url,
+        headers=headers
+    )
+
+    # Check for IP block
+    if response.url.endswith("human-verification"):
+        raise RuntimeError("Bot has been IP blocked for too many requests.")
+    return response
 
 
 def generate_valid_filename(title: str) -> bool:
@@ -71,10 +98,10 @@ def extract_gallery_id(urlstr: str) -> str:
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
 
-cached_source_code: bytes = None
+cached_source_code = None
 
 
-def get_gallery_source(gallery_id: str) -> bytes:
+def get_gallery_source(gallery_id: str):
     """
     Returns the source code of the gallery with `gallery_id` or a cached copy of it.
     """
@@ -82,7 +109,8 @@ def get_gallery_source(gallery_id: str) -> bytes:
     if cached_source_code is None:
         # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
         gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}&view=2"
-        request = requests.get(gallery_url)
+        request = send_get_request(gallery_url)
+        request.raise_for_status()
         cached_source_code = BeautifulSoup(request.content, 'html.parser')
     return cached_source_code
 
@@ -143,7 +171,8 @@ def download_image(image_url: str, dl_path: str):
     Downloads an image to `dl_path` given its page URL.
     """
     # Extract the image source URL
-    request = requests.get(image_url)
+    request = send_get_request(image_url)
+    request.raise_for_status()
     html_code = BeautifulSoup(request.content, 'html.parser')
     elems = html_code.select("#mainPhoto")
 
@@ -161,7 +190,7 @@ def download_image(image_url: str, dl_path: str):
 
     # Write the image file to disk.
     makedirs(dl_path, exist_ok=True)
-    image_data = requests.get(image_src_url).content
+    image_data = send_get_request(image_src_url).content
     with open(f"{dl_path}/{filename}", 'wb') as f:
         f.write(image_data)
 
@@ -185,9 +214,9 @@ def main(urlstr: str):
     print("Preparing to download images...")
     start_t = time()
     gallery_id = extract_gallery_id(urlstr)
-    gallery_name = get_gallery_name(gallery_id)
 
     try:
+        gallery_name = get_gallery_name(gallery_id)
         image_urls = get_image_URLs(gallery_id)
         end_t = time()
         print(f"Preparation took {end_t - start_t:0.2f}s.")
@@ -199,11 +228,20 @@ def main(urlstr: str):
                 executor.submit(download_image, image_url, gallery_name) for image_url in image_urls
             ]
 
+            # Check through futures for exceptions as they complete
+            for future in futures:
+                try:
+                    data = future.result()
+                except Exception as e:
+                    print("Thread worker reported error:", str(e))
+
         print(f"Download completed to \"{gallery_name}\".")
         end_t = time()
         print(f"Download took {end_t - start_t:0.2f}s.")
     except requests.exceptions.RequestException as e:
         raise SystemExit("System Error. ") from e
+    except Exception as e:
+        raise SystemExit("System error: " + str(e)) from e
 
 
 if __name__ == "__main__":
