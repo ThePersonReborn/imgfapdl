@@ -1,14 +1,16 @@
-from urllib.parse import urlparse, quote_plus
-from urllib.robotparser import RobotFileParser
-import requests
-from bs4 import BeautifulSoup
-from typing import List, Tuple
 import re
+from concurrent.futures import ThreadPoolExecutor
 from os import makedirs
 from time import time
-from concurrent.futures import ThreadPoolExecutor
+from typing import List
+from urllib.parse import urlparse
+from urllib.robotparser import RobotFileParser
 
-DISALLOWED_CHARACTERS = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'] # characters that can't be used for filenames
+import requests
+from bs4 import BeautifulSoup
+
+# characters that can't be used for filenames
+DISALLOWED_CHARACTERS = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
 SEMI_URL_ENCODING = {
     '\\': '%5C',
     '/': '%2F',
@@ -18,8 +20,9 @@ SEMI_URL_ENCODING = {
     '"': '%22',
     '<': '%3C',
     '>': '%3E',
-    '|': '%7C' 
+    '|': '%7C'
 }
+
 
 def generate_valid_filename(title: str) -> bool:
     """
@@ -30,6 +33,7 @@ def generate_valid_filename(title: str) -> bool:
     for char in DISALLOWED_CHARACTERS:
         filename = filename.replace(char, SEMI_URL_ENCODING[char])
     return filename
+
 
 def extract_gallery_id(urlstr: str) -> str:
     """
@@ -67,14 +71,17 @@ def extract_gallery_id(urlstr: str) -> str:
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
 
-cached_source_code:bytes = None
+cached_source_code: bytes = None
+
+
 def get_gallery_source(gallery_id: str) -> bytes:
     """
     Returns the source code of the gallery with `gallery_id` or a cached copy of it.
     """
     global cached_source_code
     if cached_source_code is None:
-        gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}&view=2"  # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
+        # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
+        gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}&view=2"
         request = requests.get(gallery_url)
         cached_source_code = BeautifulSoup(request.content, 'html.parser')
     return cached_source_code
@@ -85,8 +92,8 @@ def get_gallery_name(gallery_id: str) -> str:
     Returns the name of the gallery, given the gallery's ID
     """
     html_code = get_gallery_source(gallery_id)
-    title:str = html_code.select("title")[0].text
-    
+    title: str = html_code.select("title")[0].text
+
     # Remove additional text from title
     title = title.replace("Porn Pics & Porn GIFs", "").strip()
     filename = generate_valid_filename(title)
@@ -131,7 +138,7 @@ def get_image_URLs(gallery_id: str) -> List[str]:
     return image_page_urls
 
 
-def download_image(image_url:str, dl_path:str):
+def download_image(image_url: str, dl_path: str):
     """
     Downloads an image to `dl_path` given its page URL.
     """
@@ -159,7 +166,7 @@ def download_image(image_url:str, dl_path:str):
         f.write(image_data)
 
 
-def main(urlstr:str):
+def main(urlstr: str):
     """
     Main Function
     """
@@ -188,8 +195,10 @@ def main(urlstr:str):
         print("Downloading images...")
         start_t = time()
         with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(download_image, image_url, gallery_name) for image_url in image_urls]
-            
+            futures = [
+                executor.submit(download_image, image_url, gallery_name) for image_url in image_urls
+            ]
+
         print(f"Download completed to \"{gallery_name}\".")
         end_t = time()
         print(f"Download took {end_t - start_t:0.2f}s.")
