@@ -4,7 +4,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from os import makedirs, path
 from time import time
-from typing import List
+from typing import List, Tuple
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -65,6 +65,8 @@ def send_get_request(url: str) -> requests.Response:
                 raise RuntimeError(f"Could not automatically open human verification page, ensure you have the correct browser filepath and the incognito argument.")
             raise RuntimeError("Bot has been IP blocked for too many requests. Please try running the command again after entering the CAPTCHA.")
         raise RuntimeError(f"Bot has been IP blocked for too many requests. Please manually open {url} in an INCOGNITO window and solve the CAPTCHA, before trying again.")
+    
+    response.raise_for_status()
     return response
 
 
@@ -114,6 +116,27 @@ def extract_gallery_id(urlstr: str) -> str:
                     return query[4:]  # ID will be the rest of the query
     raise RuntimeError(f"Could not detect gallery ID from {urlstr}.")
 
+def extract_image_id(urlstr: str) -> str:
+    """
+    Extracts an image ID from a given `urlstr` linking to an image page.
+    Usually of the form `https://www.imagefap.com/photo/759249735/...`
+    """
+    url_struct = urlparse(urlstr)
+    if url_struct.scheme == "":
+        url_struct = urlparse(f"http://{urlstr}")
+
+    # Ensure correct domain
+    if not (url_struct.hostname == "www.imagefap.com" or url_struct.hostname == "imagefap.com"):
+        raise RuntimeError(f"Expected an image from imagefap.com, instead given link to {urlstr}.")
+
+    # Decide procedure based on path
+    path = url_struct.path.split("/")
+    path.pop(0)
+
+    if path[0] == "photo" and len(path) > 1:
+        return path[1]
+    raise RuntimeError(f"Given url {urlstr} is not an image page.")
+    
 
 cached_source_code = None
 
@@ -127,7 +150,6 @@ def get_gallery_source(gallery_id: str):
         # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
         gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}&view=2"
         response = send_get_request(gallery_url)
-        response.raise_for_status()
         cached_source_code = BeautifulSoup(response.content, 'html.parser')
     return cached_source_code
 
@@ -146,9 +168,25 @@ def get_gallery_name(gallery_id: str) -> str:
     return filename
 
 
-def get_image_URLs(gallery_id: str) -> List[str]:
+def get_image_name(image_id: str, gallery_id: str) -> str:
     """
-    Parses a given URL, validating it and returning the image URLs to extract.
+    Returns the name of the image, given the gallery's ID and the image ID
+    """
+    html_code = get_gallery_source(gallery_id)
+    title: str = html_code.find(
+        attrs={'id': image_id}
+    ).select('table tr td font i')[0].text
+
+    title = title.strip()
+    filename = generate_valid_filename(title)
+
+    return filename
+
+
+
+def get_image_page_data(gallery_id: str) -> List[Tuple[str, str]]:
+    """
+    Parses a given gallery ID, returning a list of tuples representing each image as a tuple (image title, image page source)
     This is constrained by the rules given by `rp`.
     """
     # Cleanly extract all links that link to image pages of the gallery
@@ -182,17 +220,33 @@ def get_image_URLs(gallery_id: str) -> List[str]:
             continue
 
         image_page_urls.append(link)
+    
+    # For each link, set the corresponding image title
+    image_data = []
+    for image_page_url in image_page_urls:
+        image_id = extract_image_id(image_page_url)
+        image_name = get_image_name(image_id, gallery_id)
+        image_data.append(
+            (image_name, image_page_url)
+        )
 
-    return image_page_urls
+    return image_data
 
 
-def download_image(image_url: str, dl_path: str):
+def download_image(image_page_data: Tuple[str, str], dl_path: str):
     """
     Downloads an image to `dl_path` given its page URL.
     """
+    filename = image_page_data[0]
+    image_url = image_page_data[1]
+
+    # Check if file already exists
+    if path.isfile(f"{dl_path}/{filename}"):
+        print(f"{dl_path}/{filename} already exists, skipping")
+        return
+
     # Extract the image source URL
     response = send_get_request(image_url)
-    response.raise_for_status()
     html_code = BeautifulSoup(response.content, 'html.parser')
     elems = html_code.select("#mainPhoto")
 
@@ -203,15 +257,9 @@ def download_image(image_url: str, dl_path: str):
         raise RuntimeError(f"No main photo detected in link {image_url}.")
 
     elem = elems[0]
-    image_title = elem.get('title')
     image_src_url = elem.get('src')
 
-    filename = generate_valid_filename(image_title)
-
     # Write the image file to disk.
-    if path.isfile(f"{dl_path}/{filename}"):
-        print(f"{dl_path}/{filename} already exists, skipping")
-        return
     makedirs(dl_path, exist_ok=True)
     image_data = send_get_request(image_src_url).content
     with open(f"{dl_path}/{filename}", 'wb') as f:
@@ -240,9 +288,9 @@ def main(urlstr: str):
 
     try:
         gallery_name = get_gallery_name(gallery_id)
-        image_urls = get_image_URLs(gallery_id)
+        image_page_data = get_image_page_data(gallery_id)
         images_downloaded = 0
-        images_total = len(image_urls)
+        images_total = len(image_page_data)
         if images_total == 0:
             raise RuntimeError("No images detected.")
         end_t = time()
@@ -252,7 +300,7 @@ def main(urlstr: str):
         start_t = time()
         with ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(download_image, image_url, gallery_name) for image_url in image_urls
+                executor.submit(download_image, image_page_data, gallery_name) for image_page_data in image_page_data
             ]
 
             # Check through futures for exceptions as they complete
