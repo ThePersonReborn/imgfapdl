@@ -56,15 +56,15 @@ def send_get_request(url: str) -> requests.Response:
     if response.url.endswith("human-verification"):
         if AUTO_OPEN:
             print("Attempting to open human verification page...")
-            runstring = f"\"{BROWSER_PATH}\" {INCOGNITO_ARG} http://www.imagefap.com/human-verification"
+            runstring = f"\"{BROWSER_PATH}\" {INCOGNITO_ARG} {url}"
             try:
                 subprocess.run(runstring, shell=True, check=True)
                 print("Opened the human verification page, please solve the CAPTCHA and try again.")
-                print("If you don't see a CAPTCHA, there is probably an issue with INCOGNITO_ARG. Open http://www.imagefap.com/human-verification manually in an INCOGNITO window and solve the CAPTCHA.")
+                print(f"If you don't see a CAPTCHA, there is probably an issue with INCOGNITO_ARG. Open {url} manually in an INCOGNITO window and solve the CAPTCHA.")
             except subprocess.CalledProcessError as e:
                 raise RuntimeError(f"Could not automatically open human verification page, ensure you have the correct browser filepath and the incognito argument.")
             raise RuntimeError("Bot has been IP blocked for too many requests. Please try running the command again after entering the CAPTCHA.")
-        raise RuntimeError("Bot has been IP blocked for too many requests. Please manually open http://www.imagefap.com/human-verification in an INCOGNITO window and solve the CAPTCHA, before trying again.")
+        raise RuntimeError(f"Bot has been IP blocked for too many requests. Please manually open {url} in an INCOGNITO window and solve the CAPTCHA, before trying again.")
     return response
 
 
