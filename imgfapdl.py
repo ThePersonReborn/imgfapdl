@@ -219,6 +219,10 @@ def main(urlstr: str):
     try:
         gallery_name = get_gallery_name(gallery_id)
         image_urls = get_image_URLs(gallery_id)
+        images_downloaded = 0
+        images_total = len(image_urls)
+        if images_total == 0:
+            raise RuntimeError("No images detected.")
         end_t = time()
         print(f"Preparation took {end_t - start_t:0.2f}s.")
 
@@ -233,10 +237,12 @@ def main(urlstr: str):
             for future in futures:
                 try:
                     data = future.result()
+                    images_downloaded += 1
+                    print(f"Progress: {(images_downloaded / images_total) * 100:0.1f}%")
                 except Exception as e:
                     print("Thread worker reported error:", str(e))
 
-        print(f"Download completed to \"{gallery_name}\".")
+        print(f"Download completed to \"{gallery_name}\". Downloaded {images_downloaded} out of {images_total} images.")
         end_t = time()
         print(f"Download took {end_t - start_t:0.2f}s.")
     except requests.exceptions.RequestException as e:
