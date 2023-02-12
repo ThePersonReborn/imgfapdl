@@ -155,8 +155,10 @@ def get_gallery_source(gallery_id: str):
     global cached_source_code
     if cached_source_code is None:
         # this is the only format we can use without knowing the Gallery's name, and auto-redirects to the `https://www.imagefap.com/pictures/12345678/Name-Of-Gallery` form.
-        gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}&view=2"
+        gallery_url = f"http://www.imagefap.com/gallery.php?gid={gallery_id}"
         response = send_get_request(gallery_url)
+        # Add the new view to the redirected URL, since the above URL doesn't redirect to the full page. We want the full page so we can detect all the images at once.
+        response = send_get_request(response.url + "?view=2")
         cached_source_code = BeautifulSoup(response.content, 'html.parser')
     return cached_source_code
 
@@ -271,6 +273,8 @@ def download_image(image_page_data: Tuple[str, str], dl_path: str):
     image_data = send_get_request(image_src_url).content
     with open(f"{dl_path}/{filename}", 'wb') as f:
         f.write(image_data)
+    
+    sleep(0.5) # sleep so we don't overwhelm the server.
 
 
 def main(urlstr: str):
